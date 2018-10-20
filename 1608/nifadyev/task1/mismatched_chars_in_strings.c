@@ -6,16 +6,21 @@
 // Task # 27: Count the number of mismatched characters in two strings
 // Представлять матрицы как одномерный массив, std, шаблонов, макс низкоуровневый код, string можно
 // TODO: compare the result of linear realization and parallel
+
+void InitializeStrings(char *string1, char *string2, const int size);
+int CountMismatchesInTwoStrings(char *string1, char *string2, const int endIndex);
+
+
 int main(int argc, char **argv)
 {
     int MAX_SIZE;
     char *str1, *str2;
-    //char *temp1, *temp2;
+    char *temp1, *temp2;
     int linearResult = 0, parallelResult = 0, mismatchCount = 0;
     double startTime = 0, endTime = 0;
     double linearTime = 0, parallelTime = 0;
-    int procNum, procRank;
-    int i, taskSize, taskRemainder;
+    int procNum, procRank = 0;
+    int i, taskSize, taskRemainder; // TODO: change to partSize
     MPI_Status status;
 
     //TODO: CHANGE into procRank
@@ -30,29 +35,17 @@ int main(int argc, char **argv)
 
     str1 = (char *)malloc(sizeof(char) * (MAX_SIZE + 1));
     str2 = (char *)malloc(sizeof(char) * (MAX_SIZE + 1));
-    srand(time(NULL));
-    //Fill strings with random characters
-    for (i = 0; i < MAX_SIZE; i++)
-    {
-        str1[i] = 'A' + rand() % ('Z' - 'A' + 1) + (rand() % 2) * ('a' - 'A');
-        str2[i] = 'A' + rand() % ('Z' - 'A' + 1) + (rand() % 2) * ('a' - 'A');
-    }
-    str1[MAX_SIZE] = '\0';
-    str2[MAX_SIZE] = '\0';
-    // printf("%s\n", str1);
-    // printf("%s\n", str2);
+    InitializeStrings(str1, str2, MAX_SIZE);
 
     //TODO: Add check for MPI_SUCCESS
     // Initialize MPI
-    MPI_Init(&argc, &argv);
-    // if (MPI_Init(&argc, &argv) != MPI_SUCCESS)
-    // {
-    //     free(str1);
-    //     free(str2);
-    //     free(temp1);
-    //     free(temp2);
-    //     return 1;
-    // }
+    //MPI_Init(&argc, &argv);
+    if (MPI_Init(&argc, &argv) != MPI_SUCCESS)
+    {
+        free(str1);
+        free(str2);
+        return 1;
+    }
     // Get the number of processors
     MPI_Comm_size(MPI_COMM_WORLD, &procNum);
     // Get rank of current process
@@ -65,13 +58,7 @@ int main(int argc, char **argv)
     if (procRank == 0)
     {
         startTime = MPI_Wtime();
-        for (i = 0; i < MAX_SIZE; i++)
-        {
-            if (str1[i] != str2[i])
-            {
-                linearResult++;
-            }
-        }
+        linearResult = CountMismatchesInTwoStrings(str1, str2, MAX_SIZE);
         endTime = MPI_Wtime();
         linearTime = endTime - startTime;
 
@@ -89,21 +76,18 @@ int main(int argc, char **argv)
             if (procNum - 1 == i)
             {
                 MPI_Send(&str1[taskSize * i], taskSize + taskRemainder, MPI_CHAR, i, 1, MPI_COMM_WORLD);
-                printf("sent part of string1 with rem\n");
+                //printf("sent part of string1 with rem\n");
                 MPI_Send(&str2[taskSize * i], taskSize + taskRemainder, MPI_CHAR, i, 2, MPI_COMM_WORLD);
-                printf("sent part of string2 with rem\n");
+                //printf("sent part of string2 with rem\n");
             }
             else
             {
                 MPI_Send(&str1[taskSize * i], taskSize, MPI_CHAR, i, 1, MPI_COMM_WORLD);
-                printf("sent part of string1\n");
+                //printf("sent part of string1\n");
                 MPI_Send(&str2[taskSize * i], taskSize, MPI_CHAR, i, 2, MPI_COMM_WORLD);
-                printf("sent part of string2\n");
+                //printf("sent part of string2\n");
             }
         }
-        // Broadcast first and second strings to each processor
-        //MPI_Bcast(&taskSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        //MPI_Bcast(&MAX_SIZE, 1, MPI_INT, 0, MPI_COMM_WORLD);
     }
 
     if (procRank != 0)
@@ -111,51 +95,28 @@ int main(int argc, char **argv)
         //TODO: if it works then create a special flag to decrease code volume
         if (procRank == procNum - 1)
         {
-            char* temp1 = (char *)malloc(sizeof(char) * (taskSize + taskRemainder));
-            char* temp2 = (char *)malloc(sizeof(char) * (taskSize + taskRemainder));
+            /* char * */ temp1 = (char *)malloc(sizeof(char) * (taskSize + taskRemainder));
+            /* char * */ temp2 = (char *)malloc(sizeof(char) * (taskSize + taskRemainder));
             MPI_Recv(temp1, taskSize + taskRemainder, MPI_CHAR, 0, 1, MPI_COMM_WORLD, &status);
-            printf("received part of string1 with pos rem on proc %d\n", procRank);
+            //printf("received part of string1 with pos rem on proc %d\n", procRank);
             MPI_Recv(temp2, taskSize + taskRemainder, MPI_CHAR, 0, 2, MPI_COMM_WORLD, &status);
-            printf("received part of string2 with pos rem on proc %d\n", procRank);
-            for (i = 0; i < taskSize + taskRemainder; i++)
-            {
-                if (temp1[i] != temp2[i])
-                {
-                    mismatchCount++;
-                }
-            }
-            // free(temp1);
-            // free(temp2);
+            //printf("received part of string2 with pos rem on proc %d\n", procRank);
+            mismatchCount = CountMismatchesInTwoStrings(temp1, temp2, taskSize + taskRemainder);
         }
         else
         {
-            char* temp1 = (char *)malloc(sizeof(char) * taskSize);
-            char* temp2 = (char *)malloc(sizeof(char) * taskSize);
+            /* char * */ temp1 = (char *)malloc(sizeof(char) * taskSize);
+            /* char * */ temp2 = (char *)malloc(sizeof(char) * taskSize);
             MPI_Recv(temp1, taskSize, MPI_CHAR, 0, 1, MPI_COMM_WORLD, &status);
-            printf("received part of string1 on proc %d\n", procRank);
+            //printf("received part of string1 on proc %d\n", procRank);
             MPI_Recv(temp2, taskSize, MPI_CHAR, 0, 2, MPI_COMM_WORLD, &status);
-            printf("received part of string2 on proc %d\n", procRank);
-            //for (i = taskSize * procRank; i < taskSize * (procRank + 1); i++)
-            for (i = 0; i < taskSize; i++)
-            {
-                if (temp1[i] != temp2[i])
-                {
-                    mismatchCount++;
-                }
-            }
-            // free(temp1);
-            // free(temp2);
+            //printf("received part of string2 on proc %d\n", procRank);
+            mismatchCount = CountMismatchesInTwoStrings(temp1, temp2, taskSize);
         }
     }
     if (procRank == 0)
     {
-        for (i = taskSize * procRank; i < taskSize * (procRank + 1); i++)
-        {
-            if (str1[i] != str2[i])
-            {
-                mismatchCount++;
-            }
-        }
+        mismatchCount = CountMismatchesInTwoStrings(str1, str2, taskSize);
     }
 
     // Collect the result into main processor
@@ -165,21 +126,50 @@ int main(int argc, char **argv)
     {
         endTime = MPI_Wtime();
         parallelTime = endTime - startTime;
+        if (linearResult != parallelResult)
+        {
+            printf("Error! Results are not equal\n");
+        }
         printf("MPI time = %.3f\n", endTime - startTime);
         printf("MPI result = %d\n", parallelResult);
         printf("Performance difference: %.1f%\n", ((linearTime - parallelTime) / ((linearTime + parallelTime) / 2)) * 100);
     }
 
-    
-
     MPI_Finalize();
-    //FIXME: if comment free str1 & str2 then itll work with -n 2
     free(str1);
     free(str2);
-    // if (procNum > 1)
-    // {
-    //     free(temp1);
-    //     free(temp2);
-    // }
+
     return 0;
+}
+
+void InitializeStrings(char *string1, char *string2, const int size)
+{
+    int i;
+    //string1 = (char *)malloc(sizeof(char) * (size + 1));
+    //string2 = (char *)malloc(sizeof(char) * (size + 1));
+    srand(time(NULL));
+
+    for (i = 0; i < size; i++)
+    {
+        string1[i] = 'A' + rand() % ('Z' - 'A' + 1) + (rand() % 2) * ('a' - 'A');
+        string2[i] = 'A' + rand() % ('Z' - 'A' + 1) + (rand() % 2) * ('a' - 'A');
+    }
+    string1[size] = '\0';
+    string2[size] = '\0';
+}
+
+int CountMismatchesInTwoStrings(char *string1, char *string2, const int endIndex)
+{
+    int result = 0;
+    int i;
+
+    for (i = 0; i < endIndex; i++)
+    {
+        if (string1[i] != string2[i])
+        {
+            result++;
+        }
+    }
+
+    return result;
 }
