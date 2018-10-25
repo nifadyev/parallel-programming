@@ -33,11 +33,17 @@ int main(int argc, char **argv)
     {
         if (argc == 5)
         {
-            // A_COLUMNS & B_ROWS should be equal
             A_ROWS = atoi(argv[1]);
             A_COLUMNS = atoi(argv[2]);
             B_ROWS = atoi(argv[3]);
             B_COLUMNS = atoi(argv[4]);
+
+            if (A_COLUMNS != B_ROWS)
+            {
+                printf("Error! Number of columns in first matrix and number ");
+                printf("of rows in second must be equal\n");
+                return 1;
+            }
         }
         else
         {
@@ -127,7 +133,7 @@ int main(int argc, char **argv)
         //****************************************************************
 
         CheckResults(linearResultingMatrix, parallelResultingMatrix, A_ROWS * B_COLUMNS);
-        printf("Performance difference: %.3f%\n", (linearTime / parallelTime) * 100);
+        printf("Performance difference: %.1f%\n", (linearTime / parallelTime) * 100);
     }
 
     MPI_Finalize();
