@@ -21,6 +21,7 @@ int main(int argc, char **argv)
     int procNum = 1, procRank = 0;
     int rowsPerProc = 0, remainingRows = 0;
     int *elementsPerProc = NULL, *shifts = NULL;
+    int *elementsPerProcGather = NULL, *shiftsGather = NULL;
     int *bufferA = NULL, *resultBuffer = NULL;
     double startTime = 0, endTime = 0;
     double linearTime = 0, parallelTime = 0;
@@ -38,10 +39,12 @@ int main(int argc, char **argv)
             B_ROWS = atoi(argv[3]);
             B_COLUMNS = atoi(argv[4]);
 
+            // Due to math algorithm of matrices multiplication
             if (A_COLUMNS != B_ROWS)
             {
                 printf("Error! Number of columns in first matrix and number ");
                 printf("of rows in second must be equal\n");
+                MPI_Finalize();
                 return 1;
             }
         }
@@ -53,11 +56,34 @@ int main(int argc, char **argv)
         A_SIZE = A_ROWS * A_COLUMNS;
         B_SIZE = B_ROWS * B_COLUMNS;
 
-        srand(time(NULL));
+        parallelResultingMatrix = (int *)malloc(sizeof(int) * A_ROWS * B_COLUMNS);
         matrixA = (int *)malloc(sizeof(int) * A_SIZE);
         matrixB = (int *)malloc(sizeof(int) * B_SIZE);
+        srand(time(NULL));
         InitializeMatrix(matrixA, A_SIZE);
         InitializeMatrix(matrixB, B_SIZE);
+
+        rowsPerProc = A_ROWS / procNum;
+        remainingRows = A_ROWS - (procNum - 1) * rowsPerProc;
+
+        elementsPerProc = (int *)malloc(sizeof(int) * procNum);
+        shifts = (int *)malloc(sizeof(int) * procNum);
+        elementsPerProcGather = (int *)malloc(sizeof(int) * procNum);
+        shiftsGather = (int *)malloc(sizeof(int) * procNum);
+        //TODO: maybe move into function
+        for (i = 0; i < procNum; i++)
+        {
+            elementsPerProc[i] = rowsPerProc * A_COLUMNS;
+            shifts[i] = i * rowsPerProc * A_COLUMNS;
+        }
+        elementsPerProc[procNum - 1] = remainingRows * A_COLUMNS;
+
+        for (i = 0; i < procNum; i++)
+        {
+            elementsPerProcGather[i] = rowsPerProc * B_COLUMNS;
+            shiftsGather[i] = i * rowsPerProc * B_COLUMNS;
+        }
+        elementsPerProcGather[procNum - 1] = remainingRows * B_COLUMNS;
     }
 
     //***********************Parallel Realization***********************
@@ -67,53 +93,59 @@ int main(int argc, char **argv)
     MPI_Bcast(&B_COLUMNS, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&A_SIZE, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&B_SIZE, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&rowsPerProc, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&remainingRows, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     if (procRank != 0)
     {
         matrixB = (int *)malloc(sizeof(int) * B_SIZE);
+        elementsPerProc = (int *)malloc(sizeof(int) * procNum);
+        shifts = (int *)malloc(sizeof(int) * procNum);
+        elementsPerProcGather = (int *)malloc(sizeof(int) * procNum);
+        shiftsGather = (int *)malloc(sizeof(int) * procNum);
     }
     MPI_Bcast(matrixB, B_SIZE, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(elementsPerProc, procNum, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(shifts, procNum, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(elementsPerProcGather, procNum, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(shiftsGather, procNum, MPI_INT, 0, MPI_COMM_WORLD);
 
-    elementsPerProc = (int *)malloc(sizeof(int) * procNum);
-    shifts = (int *)malloc(sizeof(int) * procNum);
-    rowsPerProc = A_ROWS / procNum;
-    for (i = 0; i < procNum; i++)
-    {
-        elementsPerProc[i] = rowsPerProc * A_COLUMNS;
-        shifts[i] = i * rowsPerProc * A_COLUMNS;
-    }
-    remainingRows = A_ROWS - (procNum - 1) * rowsPerProc;
-    elementsPerProc[procNum - 1] = remainingRows * A_COLUMNS;
+    // elementsPerProc = (int *)malloc(sizeof(int) * procNum);
+    // shifts = (int *)malloc(sizeof(int) * procNum);
+    // //TODO: maybe move into function
+    // //TODO: try to move it into root proc
+    // for (i = 0; i < procNum; i++)
+    // {
+    //     elementsPerProc[i] = rowsPerProc * A_COLUMNS;
+    //     shifts[i] = i * rowsPerProc * A_COLUMNS;
+    // }
+    // elementsPerProc[procNum - 1] = remainingRows * A_COLUMNS;
 
     if (procRank == procNum - 1)
     {
         rowsPerProc = remainingRows;
     }
+
     bufferA = (int *)malloc(sizeof(int) * rowsPerProc * A_COLUMNS);
+    resultBuffer = (int *)malloc(sizeof(int) * rowsPerProc * B_COLUMNS);
 
     // Scatters a buffer in parts to all processes in a communicator
     MPI_Scatterv(matrixA, elementsPerProc, shifts, MPI_INT, bufferA,
                  elementsPerProc[procRank], MPI_INT, 0, MPI_COMM_WORLD);
 
-    resultBuffer = (int *)malloc(sizeof(int) * rowsPerProc * B_COLUMNS);
-
     MultiplyMatrices(bufferA, matrixB, resultBuffer, rowsPerProc, A_COLUMNS, B_COLUMNS);
 
-    if (procRank == 0)
-    {
-        parallelResultingMatrix = (int *)malloc(sizeof(int) * A_ROWS * B_COLUMNS);
-    }
-
-    for (i = 0; i < procNum; i++)
-    {
-        elementsPerProc[i] = rowsPerProc * B_COLUMNS;
-        shifts[i] = i * rowsPerProc * B_COLUMNS;
-    }
-    elementsPerProc[procNum - 1] = remainingRows * B_COLUMNS;
+    // Neccesary part for cases with different sizes matrices
+    // for (i = 0; i < procNum; i++)
+    // {
+    //     elementsPerProc[i] = rowsPerProc * B_COLUMNS;
+    //     shifts[i] = i * rowsPerProc * B_COLUMNS;
+    // }
+    // elementsPerProc[procNum - 1] = remainingRows * B_COLUMNS;
 
     // Gathers together values from a group of processes
-    MPI_Gatherv(resultBuffer, elementsPerProc[procRank], MPI_INT,
-                parallelResultingMatrix, elementsPerProc, shifts, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Gatherv(resultBuffer, elementsPerProcGather[procRank], MPI_INT,
+                parallelResultingMatrix, elementsPerProcGather, shiftsGather, MPI_INT, 0, MPI_COMM_WORLD);
 
     if (procRank == 0)
     {
@@ -134,18 +166,21 @@ int main(int argc, char **argv)
 
         CheckResults(linearResultingMatrix, parallelResultingMatrix, A_ROWS * B_COLUMNS);
         printf("Performance difference: %.1f%\n", (linearTime / parallelTime) * 100);
+
+        free(matrixA);
+        free(linearResultingMatrix);
+        free(parallelResultingMatrix);
+        free(elementsPerProc);
+        free(shifts);
+        free(elementsPerProcGather);
+        free(shiftsGather);
     }
 
     MPI_Finalize();
 
-    free(matrixA);
     free(matrixB);
     free(bufferA);
     free(resultBuffer);
-    free(elementsPerProc);
-    free(shifts);
-    free(linearResultingMatrix);
-    free(parallelResultingMatrix);
 
     return 0;
 }
