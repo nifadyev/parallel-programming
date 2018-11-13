@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-// Task #18: Matrix multiplication using tape horizontal scheme (splits only first matrix into strings)
+// Task #17: Matrix multiplication using tape horizontal scheme (splits only first matrix into strings)
 
 void InitializeMatrix(int *matrix, const int matrixSize);
 void MultiplyMatrices(int *matrixA, int *matrixB, int *resultMatrix,
