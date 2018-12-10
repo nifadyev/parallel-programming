@@ -121,3 +121,48 @@ void Merge(int *firstArray, const int firstArrayLength, int * secondArray, const
     }
 }
 
+int *Merge(int *firstArray, const int firstArrayLength, int * secondArray, const int secondArrayLength)
+{
+    int i, k = 0, j = 0;
+    int *resultArray = (int *)malloc(sizeof(int) * (firstArrayLength + secondArrayLength));
+    for (i = 0; i < firstArrayLength + secondArrayLength; i++)
+    {
+        if (j > firstArrayLength - 1)
+        {
+            resultArray[i] = secondArray[k];
+            k++;
+        }
+        else if (k > secondArrayLength - 1)
+        {
+            resultArray[i] = firstArray[j];
+            j++;
+        }
+        else if (firstArray[j] <= secondArray[k])
+        {
+            resultArray[i] = firstArray[j];
+            j++;
+        }
+        else
+        {
+            resultArray[i] = secondArray[k];
+            k++;
+        }
+    }
+
+    return resultArray;
+}
+
+int AreResultsEqual(int *linearResultingArray, int *parallelResultingArray, const int length)
+{
+    int i;
+
+    for (i = 0; i < length; i++)
+    {
+        if (linearResultingArray[i] != parallelResultingArray[i])
+        {
+            return 1;
+        }
+    }
+
+    return 0;
+}
