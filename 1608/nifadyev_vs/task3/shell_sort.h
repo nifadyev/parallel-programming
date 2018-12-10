@@ -37,9 +37,10 @@ void CopyArray(int *sourceArray, int *destinationArray, const int length)
 
 void ShellSort(int *array, const int length)
 {
-    int gap = length / 2;
+    int gap;
     int i, j, k, temp;
-    while (gap > 0)
+
+    for (gap = length / 2; gap > 0; gap /= 2)
     {
         for (i = gap; i < length; i++)
         {
@@ -60,35 +61,6 @@ void ShellSort(int *array, const int length)
                 }
             }
         }
-        gap /= 2;
-    }
-}
-
-void Merge(int *firstArray, const int firstArrayLength, int *secondArray, const int secondArrayLength, int *resultArray)
-{
-    int i, k = 0, j = 0;
-    for (i = 0; i < firstArrayLength + secondArrayLength; i++)
-    {
-        if (j > firstArrayLength - 1)
-        {
-            resultArray[i] = secondArray[k];
-            k++;
-        }
-        else if (k > secondArrayLength - 1)
-        {
-            resultArray[i] = firstArray[j];
-            j++;
-        }
-        else if (firstArray[j] <= secondArray[k])
-        {
-            resultArray[i] = firstArray[j];
-            j++;
-        }
-        else
-        {
-            resultArray[i] = secondArray[k];
-            k++;
-        }
     }
 }
 
@@ -96,6 +68,7 @@ int *Merge(int *firstArray, const int firstArrayLength, int *secondArray, const 
 {
     int i, k = 0, j = 0;
     int *resultArray = (int *)malloc(sizeof(int) * (firstArrayLength + secondArrayLength));
+
     for (i = 0; i < firstArrayLength + secondArrayLength; i++)
     {
         if (j > firstArrayLength - 1)
@@ -148,7 +121,7 @@ void ParallelShellSort(int *array, int length, const int procNum,
     int receivedSubArrayLength;
     double startTime, endTime;
     int elementsPerProc;
-    int step; //
+    int step;
     MPI_Status status;
 
     subArrayShifts = (int *)malloc(sizeof(int) * procNum);

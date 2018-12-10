@@ -1,12 +1,14 @@
 #include "shell_sort.h"
 
+// Task # 14: Shell sort with simple merge
+
 int main(int argc, char **argv)
 {
     int procRank, procNum;
     int length;
     int *linearResultingArray, *parallelResultingArray;
-    double startTime, endTime;
-    double linearTime, parallelTime;
+    double startTime = 0.0, endTime = 0.0;
+    double linearTime = 0.0, parallelTime = 0.0;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &procNum);
@@ -14,7 +16,7 @@ int main(int argc, char **argv)
 
     if (procRank == 0)
     {
-        length = (argc == 2) ? atoi(argv[1]) : 20;
+        length = (argc == 2) ? atoi(argv[1]) : 10000;
 
         linearResultingArray = (int *)malloc(sizeof(int) * length);
         GenerateArray(linearResultingArray, length);
@@ -27,6 +29,12 @@ int main(int argc, char **argv)
 
     if (procRank == 0)
     {
+        startTime = MPI_Wtime();
+        ShellSort(linearResultingArray, length);
+        endTime = MPI_Wtime();
+
+        linearTime = endTime - startTime;
+
         if (length < 30)
         {
             printf("Initial array: ");
@@ -34,19 +42,10 @@ int main(int argc, char **argv)
 
             printf("Sorted array (parallel algorithm): ");
             PrintArray(parallelResultingArray, length);
-        }
 
-        startTime = MPI_Wtime();
-        ShellSort(linearResultingArray, length);
-        endTime = MPI_Wtime();
-
-        if (length < 30)
-        {
             printf("Sorted array (linear algorithm):   ");
             PrintArray(linearResultingArray, length);
         }
-
-        linearTime = endTime - startTime;
 
         printf("Linear time:   %.4f\n", linearTime);
         printf("Parallel time: %.4f\n", parallelTime);
