@@ -179,8 +179,8 @@ void ParallelShellSort(int *array, int length, const int procNum,
         }
         else
         {
-            MPI_Send(&elementsPerProc, 1, MPI_INT, procRank - step, 0, MPI_COMM_WORLD);
-            MPI_Send(subArrayPerProc, elementsPerProc, MPI_INT, procRank - step, 1, MPI_COMM_WORLD);
+            MPI_Send(&elementsPerProc, 1, MPI_INT, ((procRank - step) < 0) ? 0 : (procRank - step), 0, MPI_COMM_WORLD);
+            MPI_Send(subArrayPerProc, elementsPerProc, MPI_INT, ((procRank - step) < 0) ? 0 : (procRank - step), 1, MPI_COMM_WORLD);
         }
     }
 
