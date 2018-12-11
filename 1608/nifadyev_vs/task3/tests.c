@@ -5,6 +5,7 @@ TEST(ShellSort, can_generate_array)
 {
     int size = 100;
     int *array = (int *)malloc(sizeof(int) * size);
+
     ASSERT_NO_THROW(GenerateArray(array, size));
 }
 
@@ -55,7 +56,6 @@ TEST(ShellSort, cam_merge_arrays)
 {
     int firstArray[] = {1, 3, 3, 5, 6, 9};
     int secondArray[] = {0, 1, 3, 4, 5, 8};
-    int resultArray[12];
 
     ASSERT_NO_THROW(Merge(firstArray, 6, secondArray, 6));
 }
@@ -67,6 +67,7 @@ TEST(ShellSort, can_correctly_merge_arrays)
     int secondArray[] = {0, 1, 3, 4, 5, 8};
     int *resultArray = (int *)malloc(sizeof(int) * 12);
     int expectedArray[] = {0, 1, 1, 3, 3, 3, 4, 5, 5, 6, 8, 9};
+
     resultArray = Merge(firstArray, 6, secondArray, 6);
 
     for (i = 0; i < 12; i++)
@@ -104,8 +105,8 @@ TEST(ShellSort, are_results_equal_returns_0)
 TEST(ShellSort, can_execute_parallel_shell_sort)
 {
     int procNum, procRank;
-    int array[] = {1, 4, 6, 4, 34, 67, 11, 4, 7, 10};
     double time;
+    int array[] = {1, 4, 6, 4, 34, 67, 11, 4, 7, 10};
     int resultingArray[10] = {0};
 
     MPI_Comm_size(MPI_COMM_WORLD, &procNum);
@@ -119,8 +120,8 @@ TEST(ShellSort, can_execute_parallel_shell_sort_with_small_array)
 {
     int procNum, procRank;
     int i;
-    int array[] = {1, 4, 6, 4, 34, 67, 11, 4, 7, 10};
     double parallelTime;
+    int array[] = {1, 4, 6, 4, 34, 67, 11, 4, 7, 10};
     int resultingArray[10] = {0};
     int expectedArray[] = {1, 4, 4, 4, 6, 7, 10, 11, 34, 67};
 
@@ -142,8 +143,8 @@ TEST(ShellSort, can_execute_parallel_shell_sort_with_big_array)
 {
     int procNum, procRank;
     int i;
-    int *array = (int *)malloc(sizeof(int) * 500);
     double parallelTime;
+    int *array = (int *)malloc(sizeof(int) * 500);
     int *resultingArray = (int *)malloc(sizeof(int) * 500);
 
     srand(time(NULL));
@@ -173,8 +174,8 @@ TEST(ShellSort, can_execute_parallel_shell_sort_with_huge_array)
 {
     int procNum, procRank;
     int i;
-    int *array = (int *)malloc(sizeof(int) * 10000);
     double parallelTime;
+    int *array = (int *)malloc(sizeof(int) * 10000);
     int *resultingArray = (int *)malloc(sizeof(int) * 10000);
 
     srand(time(NULL));
